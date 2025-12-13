@@ -35,6 +35,21 @@
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 hidden">
     </div>
 
+    <div id="aiInsights" class="mt-10 p-6 border border-gray-200 rounded-xl bg-gray-50 hidden">
+        <h2 class="text-2xl font-bold text-blue-600 mb-4">
+            🤖 AI Interpretation
+        </h2>
+        <div id="aiInsightsContent" class="text-gray-700 prose prose-sm max-w-none
+            prose-ul:mt-2 prose-ul:mb-2
+            prose-li:my-1
+            prose-p:my-1">
+            AI insights about your product recommendations will appear here.
+    </div>
+    <div id="aiLoading" class="mt-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hidden">
+        🔄 Generating AI insights... Please wait.
+    </div>
+</div>
+
     <div id="paginationControlsBottom" class="flex justify-center items-center mt-6 space-x-2 hidden"></div>
 
 
@@ -280,6 +295,52 @@ function renderDashboardCards() {
 }
 
 
+/* ---------------------------- AI INTEGRATION ---------------------------- */
+
+// After rendering dashboard cards
+const container = document.getElementById('resultsContainer');
+const aiSection = document.getElementById('aiInsights');
+const aiContent = document.getElementById('aiInsightsContent');
+const aiLoading = document.getElementById('aiLoading');
+
+aiSection.classList.remove('hidden');
+aiContent.textContent = "Click the button below to get AI interpretation.";
+const aiButton = document.createElement('button');
+aiButton.textContent = "Generate AI Insights";
+aiButton.className = "mt-4 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-semibold transition shadow";
+aiButton.addEventListener('click', async () => {
+    aiLoading.classList.remove('hidden');
+    aiContent.innerHTML = ""; // clear old content
+    
+    try {
+        const res = await fetch("{{ route('recommender.ai') }}", {
+            method: "POST",
+            headers: {
+                "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ products: allResults }),
+        });
+
+        const data = await res.json();
+        aiLoading.classList.add('hidden');
+
+        if (data.success) {
+            aiContent.innerHTML = `<pre class="whitespace-pre-wrap text-sm leading-relaxed">${data.insight}</pre>`;        } else {
+            aiContent.innerHTML = "<p class='text-red-600'>Failed to generate AI insights.</p>";
+        }
+
+    } catch (err) {
+        console.error(err);
+        aiLoading.classList.add('hidden');
+        aiContent.innerHTML = "<p class='text-red-600'>An error occurred while fetching AI insights.</p>";
+    }
+});
+
+aiSection.appendChild(aiButton);
+
+
+
 /* ---------------------------- MODAL CONTROL AND PAGINATION ---------------------------- */
 
 const modal = document.getElementById('pairsModal');
@@ -441,6 +502,7 @@ document.getElementById('btnRun').addEventListener('click', async () => {
 
     // Store the fetched data
     allResults = data.results;
+    
 
     // Apply dashboard search filter and render the first page
     filterAndRenderDashboard(); 

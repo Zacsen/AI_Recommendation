@@ -414,12 +414,6 @@ class RecommendationService
         return $scores;
     }
 
-
-
-
-
-
-
     protected function computeItemCollabSimilarity(): array
     {
         // build transaction list (reuse getTransactions if desired)
