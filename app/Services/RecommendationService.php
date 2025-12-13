@@ -66,23 +66,36 @@ class RecommendationService
 
         foreach ($products as $id => $name) {
 
-            $finalScore = ($mbaResult['scores'][$id] ?? 0) * 0.3
-                        + ($contentSim[$id] ?? 0) * 0.2
-                        + ($collabSim[$id] ?? 0) * 0.2
-                        + ($season[$id] ?? 0) * 0.05
-                        + ($trend[$id] ?? 0) * 0.05
-                        + ($forecast[$id] ?? 0) * 0.1
-                        + ($stock[$id] ?? 0) * 0.05;
+            $baseScore =
+                ($mbaResult['scores'][$id] ?? 0) * 0.3
+                + ($contentSim[$id] ?? 0) * 0.2
+                + ($collabSim[$id] ?? 0) * 0.2
+                + ($season[$id] ?? 0) * 0.05
+                + ($trend[$id] ?? 0) * 0.05
+                + ($forecast[$id] ?? 0) * 0.1
+                + ($stock[$id] ?? 0) * 0.05;
 
             // Boost score according to channel focus
+           $channelBoost = 0;
+
             if ($focus === 'Online') {
-                $finalScore += ($channel[$id]['online_ratio'] ?? 0) * 0.1;
+                $channelBoost = ($channel[$id]['online_ratio'] ?? 0) * 0.1;
             } elseif ($focus === 'OTC') {
-                $finalScore += ($channel[$id]['otc_ratio'] ?? 0) * 0.1;
+                $channelBoost = ($channel[$id]['otc_ratio'] ?? 0) * 0.1;
             } else {
-                // overall channel boost
-                $finalScore += (($channel[$id]['online_ratio'] ?? 0) * 0.05)
-                             + (($channel[$id]['otc_ratio'] ?? 0) * 0.05);
+                $channelBoost =
+                    (($channel[$id]['online_ratio'] ?? 0) * 0.05)
+                + (($channel[$id]['otc_ratio'] ?? 0) * 0.05);
+            }
+
+            $totalSales = $channel[$id]['total_sales'] ?? 0;
+            // Sales priority logic
+            if ($totalSales === 0) {
+                $salesMultiplier = 0.6;       // 🚫 no sales → strong penalty
+            } elseif ($totalSales < 5) {
+                $salesMultiplier = 0.85;      // ⚠ low sales → mild penalty
+            } else {
+                $salesMultiplier = 1.0;       // ✅ healthy sales
             }
 
             // Prepare pairs for this product
@@ -100,6 +113,8 @@ class RecommendationService
                 }
             }
 
+            $finalScore = ($baseScore + $channelBoost) * $salesMultiplier;
+
             $results[] = [
                 'id' => $id,
                 'name' => $name,
@@ -114,6 +129,7 @@ class RecommendationService
                     'stock_multiplier' => $stock[$id] ?? 0,
                     'online_ratio' => $channel[$id]['online_ratio'] ?? 0,
                     'otc_ratio' => $channel[$id]['otc_ratio'] ?? 0,
+                    'total_sales' => $totalSales,
                 ],
                 'pairs' => $pairs,
             ];
@@ -255,6 +271,7 @@ class RecommendationService
                 $scores[$id] = [
                     'otc_ratio' => $otcQty / $total,
                     'online_ratio' => $onlineQty / $total,
+                    'total_sales' => $total
                 ];
             }
         }
