@@ -248,52 +248,92 @@ class RecommendationService
      * Compute channel ratios (Online vs OTC)
      */
     protected function computeChannelSales(): array
+        {
+            $products = DB::table('products')->pluck('id')->toArray();
+
+            $otc = DB::table('sale_items')
+                ->select('product_id', DB::raw('SUM(quantity) as total'))
+                ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
+
+            $online = DB::table('order_items')
+                ->select('product_id', DB::raw('SUM(quantity) as total'))
+                ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
+
+            $scores = [];
+            foreach ($products as $id) {
+                $otcQty = $otc[$id] ?? 0;
+                $onlineQty = $online[$id] ?? 0;
+                $total = $otcQty + $onlineQty;
+
+                if ($total == 0) {
+                    $scores[$id] = ['otc_ratio'=>0, 'online_ratio'=>0];
+                } else {
+                    $scores[$id] = [
+                        'otc_ratio' => $otcQty / $total,
+                        'online_ratio' => $onlineQty / $total,
+                        'total_sales' => $total
+                    ];
+                }
+            }
+            return $scores;
+        }
+
+        /**
+         * Stock factor (low stock → high score)
+         */
+        protected function computeStockFactor(): array
     {
-        $products = DB::table('products')->pluck('id')->toArray();
+        // Get warning thresholds
+        $thresholds = DB::table('products')
+            ->pluck('low_stock_warning_threshold', 'id')
+            ->toArray();
 
-        $otc = DB::table('sale_items')
+        // Get total stock per product
+        $stockQty = DB::table('stocks')
             ->select('product_id', DB::raw('SUM(quantity) as total'))
-            ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
-
-        $online = DB::table('order_items')
-            ->select('product_id', DB::raw('SUM(quantity) as total'))
-            ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
+            ->groupBy('product_id')
+            ->pluck('total', 'product_id')
+            ->toArray();
 
         $scores = [];
-        foreach ($products as $id) {
-            $otcQty = $otc[$id] ?? 0;
-            $onlineQty = $online[$id] ?? 0;
-            $total = $otcQty + $onlineQty;
 
-            if ($total == 0) {
-                $scores[$id] = ['otc_ratio'=>0, 'online_ratio'=>0];
+        foreach ($thresholds as $id => $threshold) {
+            $qty = $stockQty[$id] ?? 0;
+
+            // No stock at all → do not recommend
+            if ($qty <= 0) {
+                $scores[$id] = 0.0;
+                continue;
+            }
+
+            // Safety fallback if threshold is missing or zero
+            if ($threshold <= 0) {
+                $scores[$id] = 0.3;
+                continue;
+            }
+
+            /*
+            * Ratio-based scoring:
+            * qty == threshold → 1.0
+            * qty == 2x threshold → 0.5
+            * qty >= 3x threshold → ~0.2
+            */
+            $ratio = $qty / $threshold;
+
+            if ($ratio <= 1) {
+                $scores[$id] = 1.0;               // critical stock
+            } elseif ($ratio <= 2) {
+                $scores[$id] = 0.7;
+            } elseif ($ratio <= 3) {
+                $scores[$id] = 0.4;
             } else {
-                $scores[$id] = [
-                    'otc_ratio' => $otcQty / $total,
-                    'online_ratio' => $onlineQty / $total,
-                    'total_sales' => $total
-                ];
+                $scores[$id] = 0.2;               // overstocked
             }
         }
+
         return $scores;
     }
 
-    /**
-     * Stock factor (low stock → high score)
-     */
-    protected function computeStockFactor(): array
-    {
-        $products = DB::table('products')->pluck('low_stock_warning_threshold', 'id')->toArray();
-        $stockQty = DB::table('stocks')->select('product_id', DB::raw('SUM(quantity) as total'))
-                        ->groupBy('product_id')->pluck('total', 'product_id')->toArray();
-
-        $scores = [];
-        foreach ($products as $id => $threshold) {
-            $qty = $stockQty[$id] ?? 0;
-            $scores[$id] = $qty <= $threshold ? 1 : 0;
-        }
-        return $scores;
-    }
 
     // Placeholder methods for other components (replace with real calculations)
     protected function computeContentSimilarity(): array
