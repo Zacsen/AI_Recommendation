@@ -83,54 +83,146 @@ class RecommendationController extends Controller
                     'role' => 'user',
                     'content' =>
                         $prompt = "
-                    You are a sales analyst writing for a sales manager.
+                    You are a senior sales analyst preparing a concise but informative executive
+                    dashboard briefing for a sales manager.
 
-                        TASK:
-                        Interpret the product recommendation scores below.
+                    GOAL:
+                    Translate product recommendation data into clear business reasoning and
+                    actionable insights.
 
-                        STYLE & FORMAT RULES:
-                        - Keep it brief and non-technical
-                        - Use business-friendly language
-                        - Return VALID HTML ONLY
-                        - DO NOT use markdown
-                        - DO NOT use code blocks
-                        - Use semantic HTML and Tailwind CSS classes
+                    AUDIENCE:
+                    Sales managers and operations leads who need context, not technical detail.
 
-                        LAYOUT REQUIREMENTS:
+                    WRITING RULES:
+                    - Use business-focused, decision-oriented language
+                    - Avoid technical, statistical, or algorithmic explanations
+                    - Each explanation should answer:
+                    \"What is happening?\" and \"Why it matters?\"
+                    - Paragraphs may be 2–3 short sentences
+                    - Do NOT mention AI, models, algorithms, or formulas
 
-                        <h3 class='text-xl font-bold text-blue-600 mb-3'>Section title</h3>
+                    OUTPUT RULES:
+                    - Return VALID HTML ONLY
+                    - Do NOT use Markdown
+                    - Do NOT use code blocks
+                    - Use semantic HTML and Tailwind CSS classes exactly as specified
 
-                        <p class='text-gray-700 mb-4'>Short explanation</p>
+                    --------------------------------
+                    SPACING & READABILITY:
+                    --------------------------------
+                    - Maintain compact dashboard spacing
+                    - Use mb-2 or mb-3 only
+                    - Prefer short paragraphs over long blocks
+                    - Avoid single-sentence sections unless truly obvious
 
-                        TABLE STYLE:
-                        <table class='w-full text-sm border border-gray-200 rounded-xl overflow-hidden mb-6'>
+                    --------------------------------
+                    SECTION TITLE:
+                    <h3 class='text-lg font-bold text-blue-600 mb-2'>Section Title</h3>
+
+                    PARAGRAPH:
+                    <p class='text-gray-700 mb-3 text-sm leading-relaxed'>
+                    2–3 sentences providing context, reasoning, and impact.
+                    </p>
+
+                    TABLE:
+                    <table class='w-full text-sm border border-gray-200 rounded-lg overflow-hidden mb-3'>
                         <thead class='bg-gray-100 text-gray-700'>
-                        <tr>
-                        <th class='px-4 py-2 text-left'>...</th>
-                        </tr>
+                            <tr>
+                                <th class='px-3 py-2 text-left'>Product</th>
+                                <th class='px-3 py-2 text-left'>Performance</th>
+                                <th class='px-3 py-2 text-left'>Business Interpretation</th>
+                            </tr>
                         </thead>
                         <tbody>
-                        <tr class='hover:bg-gray-50'>
-                        <td class='px-4 py-2 border-t'>...</td>
-                        </tr>
+                            <tr class='hover:bg-gray-50'>
+                                <td class='px-3 py-2 border-t'>
+                                    <strong>Product Name</strong>
+                                </td>
+                                <td class='px-3 py-2 border-t text-green-600 font-semibold'>
+                                    Strong
+                                </td>
+                                <td class='px-3 py-2 border-t'>
+                                    Brief explanation of why this product performs well
+                                    and what that implies for sales planning.
+                                </td>
+                            </tr>
                         </tbody>
-                        </table>
+                    </table>
 
-                        LIST STYLE:
-                        <ul class='list-disc pl-6 text-gray-700 space-y-1 mb-6'>
-                        <li>...</li>
-                        </ul>
+                    LIST:
+                    <ul class='list-disc pl-5 text-gray-700 text-sm space-y-1 mb-3'>
+                        <li>Each bullet should explain a cause or implication, not just a fact</li>
+                    </ul>
 
-                        STRUCTURE:
-                        1. Quick Insights (short paragraph)
-                        2. Top Products (table)
-                        3. Key Trends (bullet list)
-                        4. Recommended Actions (bullet list)
+                    --------------------------------
+                    CONFIDENCE LANGUAGE (REQUIRED):
+                    --------------------------------
+                    Use confidence wording to indicate reliability of insights:
+                    - High confidence recommendation
+                    - Moderate confidence recommendation
+                    - Low confidence recommendation
 
-                        IMPORTANT:
-                        - Highlight strong products in GREEN text
-                        - Highlight weak products in RED text
-                        - Emphasize product names using <strong>
+                    Explain confidence in words, not numbers.
+                    Example:
+                    \"This is a high confidence recommendation due to consistent sales
+                    performance and strong pairing behavior.\"
+
+                    --------------------------------
+                    PRODUCT PAIR LANGUAGE:
+                    --------------------------------
+                    When discussing product pairs:
+                    - Focus on buying behavior, not metrics
+                    - Explain *why* the pair works together
+                    - Use phrases such as:
+                    \"Frequently purchased together\"
+                    \"Complements the primary product\"
+                    \"Creates a natural bundle opportunity\"
+
+                    --------------------------------
+                    CONTENT STRUCTURE (STRICT ORDER):
+                    --------------------------------
+
+                    1. Quick Insights
+                    - Provide ONE bold paragraph (3–4 short sentences)
+                    - The paragraph should clearly explain:
+                        • Overall sales performance
+                        • How reliable the recommendations are
+                        • Notable strengths or weaknesses in the product mix
+                        • What this generally means for sales decisions
+                    - Keep language business-focused and non-technical
+                    - Do NOT mention calculations, scores, or formulas
+                    - The entire paragraph must be wrapped in <strong> tags
+                    
+
+                    2. Top Products
+                    - Table of up to 5 products
+                    - Each row must include a short business interpretation
+                    - Highlight strong products in GREEN
+                    - Highlight weak products in RED
+
+                    3. Product Pair Opportunities
+                    - Provide ONE bold paragraph (3–4 short sentences)
+                    - Table or bullet list (max 5 pairs)
+                    - Explain how pairing supports revenue or basket size
+                    - Recommend other stratigies for each pair
+
+                    4. Key Trends
+                    - 3–5 bullets
+                    - Each bullet should explain both trend and implication
+
+                    5. Recommended Actions
+                    - 3–5 concrete actions
+                    - Each action should include a brief rationale
+                    - Mention confidence level where appropriate
+
+                    --------------------------------
+                    IMPORTANT CONSTRAINTS:
+                    --------------------------------
+                    - Do NOT invent products or data
+                    - Do NOT repeat identical explanations
+                    - Avoid buzzwords and vague phrases
+                    - Favor clarity and reasoning over length
+
 
                         DATA:
                     " . json_encode($products, JSON_PRETTY_PRINT)
